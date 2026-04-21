@@ -1,0 +1,434 @@
+<!-- 
+  SYSTEME.IO INSTRUCTIONS:
+  1. Add a "Raw HTML" element to your page.
+  2. Paste ALL the code below into that element.
+  3. Save and Preview.
+  
+  IMPORTANT CONFIGURATION STEPS:
+  1. Replace 'pk_test_...' with your Stripe LIVE Publishable Key (starts with pk_live_).
+  2. Replace 'https://avaada.space/create-payment-intent' with your deployed backend URL.
+-->
+
+<!-- 1. Load Dependencies (Tailwind CSS, Fonts, Stripe.js, PayPal SDK) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://www.paypal.com/sdk/js?client-id=AShqHTzS0HN1xmGVaVEZWBLLmP9z6lpYTmi517CSYmXg-_wRDqKHtpQGw5Iztl_uldWtK1TSv-Xm46xD&currency=USD"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+<!-- 2. Configure Styles -->
+<script>
+  if (typeof tailwind === 'undefined') {
+      // Fallback if needed
+  }
+  
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Outfit', 'sans-serif'],
+          display: ['Space Grotesk', 'sans-serif'],
+        },
+        colors: {
+          brand: {
+            primary: '#D90429',
+            success: '#10b981',
+          }
+        },
+        animation: {
+            'spin-slow': 'spin 3s linear infinite',
+            'pulse-soft': 'pulse-soft 2s infinite ease-in-out',
+        },
+      }
+    }
+  }
+</script>
+
+<!-- 3. The Widget Structure -->
+<div id="avada-loading-widget" class="w-full max-w-2xl mx-auto bg-white p-6 md:p-10 rounded-[2.5rem] shadow-xl border border-gray-100 text-center font-sans my-8 relative z-10">
+    
+    <!-- Header Status -->
+    <div class="flex flex-col items-center justify-center mb-8">
+        <div id="avada-status-badge" class="inline-flex items-center gap-2 mb-3 bg-gray-50 px-4 py-1.5 rounded-full border border-gray-100 shadow-sm transition-all duration-500">
+            <svg id="avada-spinner" class="animate-spin text-brand-primary w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span id="avada-status-text" class="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">Preparing Collection</span>
+        </div>
+        <h3 id="avada-main-title" class="text-3xl md:text-4xl font-black font-display text-gray-900 mb-2">Adding All Books</h3>
+        <p id="avada-subtitle" class="text-gray-400 text-xs md:text-sm font-bold tracking-wide">Unlocking high-res chapters...</p>
+    </div>
+
+    <!-- Progress Bar (Fades out when done) -->
+    <div id="avada-progress-container" class="relative mb-10 px-2 md:px-6 transition-opacity duration-500">
+        <div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden shadow-inner border border-gray-50">
+           <div id="avada-progress-fill" class="h-full bg-gradient-to-r from-brand-primary to-red-400 transition-all duration-300 ease-out w-0"></div>
+        </div>
+    </div>
+
+    <!-- Books Grid -->
+    <div id="avada-books-grid" class="grid grid-cols-2 gap-2 md:gap-4 text-left mb-6">
+        <!-- Items will be injected here by JS -->
+    </div>
+
+    <!-- Payment CTA (Reveals when done) -->
+    <div id="avada-payment-section" class="hidden opacity-0 transform translate-y-4 transition-all duration-700 ease-out">
+        <div class="flex flex-col gap-4 px-2 md:px-4 text-left">
+            
+            <!-- Price Card -->
+            <div class="bg-red-50 p-3 rounded-2xl border border-red-100 flex items-center justify-between mb-2">
+                <div class="text-left">
+                    <span class="text-[9px] font-black text-brand-primary uppercase tracking-widest block leading-none mb-1">Limited Offer</span>
+                    <span class="text-xl font-black text-gray-900">$49 <span class="text-gray-400 line-through text-xs font-bold ml-1">$199</span></span>
+                </div>
+                <div class="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl shadow-sm border border-red-100">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-brand-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span class="text-[10px] font-bold font-mono text-brand-primary tabular-nums">02:23:49</span>
+                </div>
+            </div>
+
+            <!-- Combined Payment Container -->
+            <div class="bg-white border border-gray-200 rounded-2xl shadow-lg p-5 relative overflow-hidden">
+                 <!-- Decorative Top Line -->
+                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-200 via-brand-primary to-gray-200"></div>
+
+                 <!-- Email Input -->
+                 <div class="mb-4">
+                     <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 block">Email Address (For Receipt)</label>
+                     <div class="relative">
+                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                             <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                         </div>
+                         <input type="email" id="avada-email-input" class="block w-full pl-10 pr-3 py-3 border border-gray-200 bg-gray-50 rounded-xl text-sm font-bold shadow-sm transition-all focus:bg-white focus:border-brand-primary focus:ring-1 focus:ring-brand-primary outline-none" placeholder="you@example.com" />
+                     </div>
+                 </div>
+
+                 <!-- Payment Method Selector -->
+                 <div class="grid grid-cols-2 gap-2 mb-4">
+                     <button id="btn-method-stripe" class="flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-xs font-bold uppercase tracking-wide bg-gray-900 text-white border-gray-900 shadow-md">
+                         <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg> Card
+                     </button>
+                     <button id="btn-method-paypal" class="flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-xs font-bold uppercase tracking-wide bg-gray-50 text-gray-500 border-gray-100 hover:bg-gray-100">
+                         <span class="font-serif italic font-black text-sm">P</span> PayPal
+                     </button>
+                 </div>
+
+                 <!-- Stripe Wrapper -->
+                 <div id="stripe-wrapper">
+                     <!-- Real Stripe Element -->
+                     <div id="payment-element" class="min-h-[220px]">
+                         <div id="payment-loading" class="flex flex-col items-center justify-center py-10 gap-3 text-gray-400 h-full">
+                             <svg class="animate-spin text-brand-primary w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                             <span class="text-xs font-bold uppercase tracking-wider">Loading Secure Gateway...</span>
+                         </div>
+                     </div>
+                 </div>
+
+                 <!-- PayPal Wrapper (Hidden initially) -->
+                 <div id="paypal-wrapper" class="hidden min-h-[150px] flex flex-col items-center justify-center animate-[fadeIn_0.3s]">
+                     <div id="paypal-button-container" class="w-full"></div>
+                 </div>
+            </div>
+            
+            <div id="stripe-error-message" class="hidden mt-4 p-3 bg-red-50 text-red-600 text-xs font-bold rounded-xl border border-red-100"></div>
+
+            <!-- Stripe Pay Button -->
+            <button id="avada-pay-btn" class="w-full mt-4 py-4 bg-gradient-to-r from-[#059669] to-[#10B981] hover:from-[#047857] hover:to-[#059669] text-white rounded-2xl font-black text-lg uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_30px_rgba(16,185,129,0.6)] border border-white/20 transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 relative overflow-hidden group">
+                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></div>
+                <span class="relative z-10">Download Books</span> 
+                <svg class="w-5 h-5 relative z-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            </button>
+            
+            <p id="footer-text" class="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-2 flex items-center justify-center gap-2">
+                <svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                Powered by Stripe • SSL Encrypted
+            </p>
+        </div>
+    </div>
+
+</div>
+
+<!-- 4. Logic Script -->
+<script>
+(function() {
+    // --- CONFIGURATION ---
+    // IMPORTANT: Replace this with your Live Publishable Key (starts with pk_live_)
+    const STRIPE_PK = 'pk_live_51PRJCsGGsoQTkhyv6OrT4zvnaaB5Y0MSSkTXi0ytj33oygsfW3dcu6aOFa9q3dr2mXYTCJErnFQJcOcyuDAsQd4B00lIAdclbB'; 
+    
+    // Auto-detect Local vs Prod Backend
+    const BACKEND_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+      ? "http://localhost:4242/create-payment-intent"
+      : "https://avaada.space/create-payment-intent";
+
+    const SUCCESS_URL = "https://architect.systeme.io/books"; 
+    
+    const BOOKS = [
+        { title: "LIVING ROOM DESIGN BOOK", img: "https://drive.google.com/thumbnail?id=1YYJxA6NPSH23Oe3Nal_3QlW_DG0-mqKJ&sz=w200" },
+        { title: "KITCHEN DESIGN BOOK", img: "https://drive.google.com/thumbnail?id=1AlxdHun9I2AO639g4Q0YJv_BOzb9sbZe&sz=w200" },
+        { title: "BEDROOM DESIGN BOOK", img: "https://drive.google.com/thumbnail?id=12APuUeW_CUcJxCYDG-R0PhmtwpKmWqs8&sz=w200" },
+        { title: "WASHROOM DESIGN BOOK", img: "https://drive.google.com/thumbnail?id=17CCyJ7HJhtPg3XPS8y9wf7SOG_kVMgf8&sz=w200" },
+        { title: "STUDY DESIGN BOOK", img: "https://drive.google.com/thumbnail?id=1dzA2UnKUd_S37XMjh53ZiuhviZAivH1B&sz=w200" },
+        { title: "ELEVATIONS DESIGN BOOK", img: "https://drive.google.com/thumbnail?id=1_TGYyThr32ciEl7C7obqHnwq1_WOR8N2&sz=w200" }
+    ];
+
+    // DOM Elements
+    const grid = document.getElementById('avada-books-grid');
+    const progressBar = document.getElementById('avada-progress-fill');
+    const progressContainer = document.getElementById('avada-progress-container');
+    const paymentSection = document.getElementById('avada-payment-section');
+    const statusBadge = document.getElementById('avada-status-badge');
+    const statusText = document.getElementById('avada-status-text');
+    const spinner = document.getElementById('avada-spinner');
+    const mainTitle = document.getElementById('avada-main-title');
+    const subtitle = document.getElementById('avada-subtitle');
+    
+    // Form Elements
+    const payBtn = document.getElementById('avada-pay-btn');
+    const emailInput = document.getElementById('avada-email-input');
+    const errorMsg = document.getElementById('stripe-error-message');
+    const paymentElementContainer = document.getElementById('payment-element');
+    const paymentLoading = document.getElementById('payment-loading');
+    
+    // Switcher Elements
+    const btnStripe = document.getElementById('btn-method-stripe');
+    const btnPayPal = document.getElementById('btn-method-paypal');
+    const stripeWrapper = document.getElementById('stripe-wrapper');
+    const paypalWrapper = document.getElementById('paypal-wrapper');
+    const footerText = document.getElementById('footer-text');
+
+    let currentIndex = 0;
+    let stripe, elements;
+    let paymentMethod = 'stripe';
+    let paypalRendered = false;
+
+    // --- TOGGLE HANDLERS ---
+    btnStripe.addEventListener('click', () => switchMethod('stripe'));
+    btnPayPal.addEventListener('click', () => switchMethod('paypal'));
+
+    function switchMethod(method) {
+        paymentMethod = method;
+        if(method === 'stripe') {
+            btnStripe.className = "flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-xs font-bold uppercase tracking-wide bg-gray-900 text-white border-gray-900 shadow-md";
+            btnPayPal.className = "flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-xs font-bold uppercase tracking-wide bg-gray-50 text-gray-500 border-gray-100 hover:bg-gray-100";
+            stripeWrapper.classList.remove('hidden');
+            paypalWrapper.classList.add('hidden');
+            payBtn.classList.remove('hidden');
+            footerText.innerText = "Powered by Stripe • SSL Encrypted";
+        } else {
+            btnStripe.className = "flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-xs font-bold uppercase tracking-wide bg-gray-50 text-gray-500 border-gray-100 hover:bg-gray-100";
+            btnPayPal.className = "flex items-center justify-center gap-2 py-3 rounded-xl border transition-all text-xs font-bold uppercase tracking-wide bg-[#003087] text-white border-[#003087] shadow-md";
+            stripeWrapper.classList.add('hidden');
+            paypalWrapper.classList.remove('hidden');
+            payBtn.classList.add('hidden');
+            footerText.innerText = "Redirecting to PayPal for secure payment.";
+            
+            // Render PayPal if not already
+            if(!paypalRendered && window.paypal) {
+                renderPayPal();
+                paypalRendered = true;
+            }
+        }
+    }
+
+    function renderPayPal() {
+         window.paypal.Buttons({
+            style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal', height: 48 },
+            createOrder: function(data, actions) {
+                return actions.order.create({
+                    purchase_units: [{
+                        description: "Avada Design Bundle",
+                        amount: { value: '49' }
+                    }]
+                });
+            },
+            onApprove: function(data, actions) {
+                return actions.order.capture().then(function(details) {
+                    alert('Transaction completed by ' + details.payer.name.given_name);
+                    window.location.href = SUCCESS_URL;
+                });
+            }
+        }).render('#paypal-button-container');
+    }
+
+    // --- STRIPE HANDLER ---
+    async function initializeStripe(retryCount = 0) {
+        if(!window.Stripe) {
+            if(retryCount < 5) {
+                console.warn("Stripe script not ready. Retrying...");
+                setTimeout(() => initializeStripe(retryCount + 1), 500);
+                return;
+            }
+            if(paymentLoading) paymentLoading.innerHTML = '<span class="text-red-500 font-bold text-xs">Failed to load Stripe SDK. Check internet.</span>';
+            return;
+        }
+        stripe = Stripe(STRIPE_PK);
+        
+        try {
+            // Fetch Client Secret from Backend
+            const response = await fetch(BACKEND_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    items: [{ id: "lifetime-bundle" }]
+                }),
+            });
+            
+            if(!response.ok) throw new Error("Backend connection failed");
+            
+            const { clientSecret } = await response.json();
+            
+            const appearance = {
+                theme: 'stripe',
+                variables: { 
+                    colorPrimary: '#D90429', 
+                    borderRadius: '12px',
+                    fontFamily: '"Outfit", sans-serif',
+                },
+            };
+            
+            elements = stripe.elements({ appearance, clientSecret });
+            const paymentElement = elements.create("payment", { 
+                layout: "tabs",
+                fields: { billingDetails: { email: 'never' } }
+            });
+            paymentElement.mount("#payment-element");
+            
+            // Remove loading indicator when ready
+            paymentElement.on('ready', function() {
+                if(paymentLoading) paymentLoading.style.display = 'none';
+            });
+
+        } catch(e) {
+            console.error("Stripe Connection Failed:", e);
+            if(paymentLoading) {
+                 paymentLoading.innerHTML = '<span class="text-red-500 font-bold text-xs">Connection Failed. Please refresh.</span>';
+            }
+        }
+    }
+
+    async function handlePayment() {
+        // Validate Email
+        if(!emailInput.value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value)) {
+            alert("Please enter a valid email for your receipt.");
+            emailInput.focus();
+            return;
+        }
+
+        payBtn.disabled = true;
+        payBtn.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...';
+        errorMsg.classList.add('hidden');
+
+        if(!stripe || !elements) return;
+
+        const { error } = await stripe.confirmPayment({
+            elements,
+            confirmParams: {
+                return_url: SUCCESS_URL,
+                receipt_email: emailInput.value,
+                payment_method_data: {
+                    billing_details: {
+                        email: emailInput.value
+                    }
+                }
+            },
+        });
+
+        if (error) {
+            errorMsg.innerText = error.message;
+            errorMsg.classList.remove('hidden');
+            payBtn.disabled = false;
+            payBtn.innerHTML = '<span class="relative z-10">Download Books</span> <svg class="w-5 h-5 relative z-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>';
+        }
+    }
+
+    if (payBtn) {
+        payBtn.addEventListener('click', handlePayment);
+    }
+
+    // --- RENDER GRID ---
+    if (grid && grid.children.length === 0) {
+        BOOKS.forEach((book, index) => {
+            const item = document.createElement('div');
+            item.className = 'flex items-center gap-2 md:gap-3 bg-white p-2 md:p-2.5 rounded-xl md:rounded-2xl border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] opacity-0 transform translate-y-4 transition-all duration-500 ease-out';
+            item.id = `avada-book-${index}`;
+            item.innerHTML = `
+                <div class="w-8 h-8 md:w-12 md:h-12 rounded-lg overflow-hidden shrink-0 border border-gray-100 bg-gray-50">
+                     <img src="${book.img}" class="w-full h-full object-cover" alt="Cover" />
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="text-[8px] md:text-[10px] font-black text-gray-800 uppercase tracking-tight truncate">${book.title}</div>
+                </div>
+                <div class="w-4 h-4 md:w-6 md:h-6 rounded-full bg-green-50 flex items-center justify-center text-brand-success border border-green-100">
+                   <svg class="w-2.5 h-2.5 md:w-3.5 md:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="4">
+                       <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                   </svg>
+                </div>
+            `;
+            grid.appendChild(item);
+        });
+    }
+
+    // --- ANIMATION LOOP ---
+    function animateLoading() {
+        if (currentIndex >= BOOKS.length) {
+            // FINISHED LOADING
+            setTimeout(() => {
+                // 1. Hide Progress
+                if (progressContainer) progressContainer.style.opacity = '0';
+                if (progressContainer) setTimeout(() => progressContainer.style.display = 'none', 500);
+
+                // 2. Change Status
+                if (statusText) statusText.innerText = "Collection Ready";
+                if (statusBadge) statusBadge.classList.replace('bg-gray-50', 'bg-green-50');
+                if (statusBadge) statusBadge.classList.replace('border-gray-100', 'border-green-100');
+                if (statusBadge) statusBadge.classList.add('text-green-600');
+                if (spinner) spinner.style.display = 'none'; // Hide spinner
+                // Add Checkmark
+                const check = document.createElement('span');
+                check.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+                if (statusBadge) statusBadge.insertBefore(check, statusText);
+
+                if (mainTitle) mainTitle.innerText = "All Books Unlocked";
+                if (subtitle) subtitle.innerText = "Instant Access • PDF Format";
+
+                // 3. Show Payment Section
+                if (paymentSection) {
+                    paymentSection.classList.remove('hidden');
+                    // Small delay for CSS transition to work
+                    setTimeout(() => {
+                        paymentSection.classList.remove('opacity-0', 'translate-y-4');
+                    }, 50);
+                }
+                
+                // 4. Initialize Stripe (Now that UI is ready)
+                initializeStripe();
+
+            }, 600);
+            return; 
+        }
+
+        // Reveal Item
+        const item = document.getElementById(`avada-book-${currentIndex}`);
+        if (item) {
+            item.classList.remove('opacity-0', 'translate-y-4');
+        }
+
+        // Update Progress
+        const progress = ((currentIndex + 1) / BOOKS.length) * 100;
+        if (progressBar) {
+            progressBar.style.width = `${progress}%`;
+        }
+
+        currentIndex++;
+        
+        // Schedule next item
+        setTimeout(animateLoading, 250); 
+    }
+
+    // Start
+    setTimeout(animateLoading, 500);
+
+})();
+</script>

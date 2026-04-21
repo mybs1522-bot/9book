@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Animation</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;1,9..144,400;1,9..144,700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .scene {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .scene.active {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+    z-index: 10;
+  }
+
+  .scene.exiting {
+    opacity: 0;
+    transform: scale(1.05);
+    z-index: 5;
+  }
+
+  /* ── Scene 1: Intro Text ── */
+  #intro-scene {
+    background: radial-gradient(ellipse at center, #1a1410 0%, #0a0a0a 70%);
+  }
+
+  .intro-label {
+    font-size: 14px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: rgba(251,146,60,0.8);
+    font-weight: 700;
+    margin-bottom: 24px;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.6s ease 0.2s, transform 0.6s ease 0.2s;
+  }
+
+  .intro-title {
+    font-size: clamp(42px, 7vw, 88px);
+    font-weight: 900;
+    line-height: 1.05;
+    text-align: center;
+    letter-spacing: -0.04em;
+    max-width: 800px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease 0.4s, transform 0.8s ease 0.4s;
+  }
+
+  .intro-title span {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 400;
+    background: linear-gradient(135deg, #fb923c, #f59e0b, #ea580c);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  #intro-scene.active .intro-label,
+  #intro-scene.active .intro-title {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── Scene 2–7: Individual Book Scenes ── */
+  .book-scene {
+    background: #0a0a0a;
+    gap: 0;
+  }
+
+  .book-scene .book-number {
+    font-size: 12px;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: rgba(251,146,60,0.6);
+    font-weight: 700;
+    margin-bottom: 20px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s;
+  }
+
+  .book-scene .book-cover-wrapper {
+    position: relative;
+    width: 280px;
+    height: 370px;
+    margin-bottom: 28px;
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
+    transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.05s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.05s;
+  }
+
+  .book-scene .book-cover-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 16px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 10px 30px rgba(234,88,12,0.1);
+  }
+
+  .book-scene .book-cover-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    pointer-events: none;
+  }
+
+  .book-scene .book-title {
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s;
+  }
+
+  .book-scene .book-subtitle {
+    font-size: 15px;
+    color: rgba(255,255,255,0.4);
+    margin-top: 8px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.5s ease 0.4s, transform 0.5s ease 0.4s;
+  }
+
+  .book-scene.active .book-number,
+  .book-scene.active .book-cover-wrapper,
+  .book-scene.active .book-title,
+  .book-scene.active .book-subtitle {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  /* ── Scene 8: Folder Assembly ── */
+  #folder-scene {
+    background: radial-gradient(ellipse at center, #1a1410 0%, #0a0a0a 70%);
+    perspective: 1200px;
+  }
+
+  .folder-container {
+    position: relative;
+    width: 320px;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-style: preserve-3d;
+  }
+
+  /* Folder back */
+  .folder-back {
+    position: absolute;
+    width: 200px;
+    height: 150px;
+    background: linear-gradient(145deg, #c2813a, #a06830);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    z-index: 1;
+    transform-origin: bottom center;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Folder tab */
+  .folder-tab {
+    position: absolute;
+    width: 70px;
+    height: 22px;
+    background: linear-gradient(145deg, #b07030, #8c5828);
+    border-radius: 8px 8px 0 0;
+    top: calc(50% - 75px - 18px);
+    left: calc(50% - 100px + 20px);
+    z-index: 1;
+    transform-origin: bottom center;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Folder front */
+  .folder-front {
+    position: absolute;
+    width: 200px;
+    height: 150px;
+    background: linear-gradient(145deg, #d4944a, #b87838);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    top: calc(50% - 75px + 5px);
+    z-index: 30;
+    transform-origin: bottom center;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .folder-front::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  /* Folder open state */
+  .folder-container.open .folder-back {
+    transform: rotateX(-15deg);
+  }
+  .folder-container.open .folder-tab {
+    transform: rotateX(-25deg) translateY(-3px);
+  }
+  .folder-container.open .folder-front {
+    transform: rotateX(20deg) translateY(10px);
+  }
+
+  /* Flying book cards */
+  .flying-book {
+    position: absolute;
+    width: 100px;
+    height: 140px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+    z-index: 15;
+    transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity: 0;
+  }
+
+  .flying-book img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .flying-book .fly-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 6px 8px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    font-size: 9px;
+    font-weight: 700;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Spread positions */
+  .flying-book.spread {
+    opacity: 1;
+  }
+  .flying-book.spread:nth-child(1) { transform: translate(-140px, -100px) rotate(-15deg); }
+  .flying-book.spread:nth-child(2) { transform: translate(0px, -120px) rotate(0deg); }
+  .flying-book.spread:nth-child(3) { transform: translate(140px, -100px) rotate(15deg); }
+  .flying-book.spread:nth-child(4) { transform: translate(-120px, 40px) rotate(-10deg); }
+  .flying-book.spread:nth-child(5) { transform: translate(20px, 50px) rotate(5deg); }
+  .flying-book.spread:nth-child(6) { transform: translate(140px, 30px) rotate(12deg); }
+
+  /* Collected into folder */
+  .flying-book.collected {
+    opacity: 1;
+    width: 80px;
+    height: 110px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+  .flying-book.collected:nth-child(1) { transform: translate(-10px, -25px) rotate(-8deg) scale(0.85); transition-delay: 0ms; }
+  .flying-book.collected:nth-child(2) { transform: translate(0px, -30px) rotate(-3deg) scale(0.88); transition-delay: 60ms; }
+  .flying-book.collected:nth-child(3) { transform: translate(10px, -28px) rotate(2deg) scale(0.85); transition-delay: 120ms; }
+  .flying-book.collected:nth-child(4) { transform: translate(-5px, -22px) rotate(-5deg) scale(0.82); transition-delay: 180ms; }
+  .flying-book.collected:nth-child(5) { transform: translate(5px, -26px) rotate(4deg) scale(0.84); transition-delay: 240ms; }
+  .flying-book.collected:nth-child(6) { transform: translate(0px, -24px) rotate(0deg) scale(0.86); transition-delay: 300ms; }
+
+  /* Folder title text */
+  .folder-title {
+    position: absolute;
+    bottom: 20px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .folder-title.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .folder-title h3 {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .folder-title p {
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+    margin-top: 4px;
+  }
+
+  /* Ambient particles */
+  .particle {
+    position: fixed;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: rgba(251,146,60,0.15);
+    pointer-events: none;
+    z-index: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- Scene 1: Intro -->
+<div id="intro-scene" class="scene">
+  <div class="intro-label">6 BOOKS · 800+ PAGES</div>
+  <h1 class="intro-title">You'll Learn How to<br><span>Design</span></h1>
+</div>
+
+<!-- Scene 2-7: Individual Books -->
+<div id="book-1" class="scene book-scene">
+  <div class="book-number">BOOK 01 OF 06</div>
+  <div class="book-cover-wrapper"><img src="/images/living_room.png" alt="Living Room"></div>
+  <div class="book-title">Living Room</div>
+  <div class="book-subtitle">Layouts · Clearances · Furniture Arrangements</div>
+</div>
+
+<div id="book-2" class="scene book-scene">
+  <div class="book-number">BOOK 02 OF 06</div>
+  <div class="book-cover-wrapper"><img src="/images/kitchen.png" alt="Kitchen"></div>
+  <div class="book-title">Kitchen</div>
+  <div class="book-subtitle">Zones · Cabinets · Dimensions · Storage</div>
+</div>
+
+<div id="book-3" class="scene book-scene">
+  <div class="book-number">BOOK 03 OF 06</div>
+  <div class="book-cover-wrapper"><img src="/images/bedroom.png" alt="Bedroom"></div>
+  <div class="book-title">Bedroom</div>
+  <div class="book-subtitle">Bed Sizes · Closets · Circulation · Services</div>
+</div>
+
+<div id="book-4" class="scene book-scene">
+  <div class="book-number">BOOK 04 OF 06</div>
+  <div class="book-cover-wrapper"><img src="/images/washroom.png" alt="Washroom"></div>
+  <div class="book-title">Washroom</div>
+  <div class="book-subtitle">Components · Clearances · Drainage · Design Tips</div>
+</div>
+
+<div id="book-5" class="scene book-scene">
+  <div class="book-number">BOOK 05 OF 06</div>
+  <div class="book-cover-wrapper"><img src="/images/study.png" alt="Study"></div>
+  <div class="book-title">Study Room</div>
+  <div class="book-subtitle">Ergonomics · Productivity · Privacy · Lighting</div>
+</div>
+
+<div id="book-6" class="scene book-scene">
+  <div class="book-number">BOOK 06 OF 06</div>
+  <div class="book-cover-wrapper"><img src="/images/elevations.png" alt="Elevations"></div>
+  <div class="book-title">Elevations</div>
+  <div class="book-subtitle">Sunpath · Winds · Exteriors · Climate Design</div>
+</div>
+
+<!-- Scene 8: Folder Assembly -->
+<div id="folder-scene" class="scene">
+  <div class="folder-container" id="folderContainer">
+    <!-- Folder back -->
+    <div class="folder-back"></div>
+    <!-- Folder tab -->
+    <div class="folder-tab"></div>
+
+    <!-- Flying books -->
+    <div class="flying-book" id="fly-1"><img src="/images/living_room.png" alt=""><div class="fly-label">Living Room</div></div>
+    <div class="flying-book" id="fly-2"><img src="/images/kitchen.png" alt=""><div class="fly-label">Kitchen</div></div>
+    <div class="flying-book" id="fly-3"><img src="/images/bedroom.png" alt=""><div class="fly-label">Bedroom</div></div>
+    <div class="flying-book" id="fly-4"><img src="/images/washroom.png" alt=""><div class="fly-label">Washroom</div></div>
+    <div class="flying-book" id="fly-5"><img src="/images/study.png" alt=""><div class="fly-label">Study</div></div>
+    <div class="flying-book" id="fly-6"><img src="/images/elevations.png" alt=""><div class="fly-label">Elevations</div></div>
+
+    <!-- Folder front -->
+    <div class="folder-front"></div>
+  </div>
+
+  <div class="folder-title" id="folderTitle">
+    <h3>6 Books on Residential Design</h3>
+    <p>Everything you need. All in one place.</p>
+  </div>
+</div>
+
+<script>
+  const scenes = [
+    'intro-scene',
+    'book-1', 'book-2', 'book-3', 'book-4', 'book-5', 'book-6',
+    'folder-scene'
+  ];
+
+  // Timing: intro 3s, each book 2s, folder 5s
+  const timing = [3000, 2000, 2000, 2000, 2000, 2000, 2000, 8000];
+
+  let currentScene = -1;
+
+  function showScene(index) {
+    // Exit current
+    if (currentScene >= 0) {
+      const prev = document.getElementById(scenes[currentScene]);
+      prev.classList.remove('active');
+      prev.classList.add('exiting');
+      setTimeout(() => prev.classList.remove('exiting'), 700);
+    }
+
+    currentScene = index;
+
+    if (index >= scenes.length) return;
+
+    const el = document.getElementById(scenes[index]);
+
+    // Small delay for enter
+    setTimeout(() => {
+      el.classList.add('active');
+    }, 100);
+
+    // Folder scene special handling
+    if (scenes[index] === 'folder-scene') {
+      runFolderAnimation();
+    }
+
+    // Auto-advance
+    if (index < scenes.length - 1) {
+      setTimeout(() => showScene(index + 1), timing[index]);
+    }
+  }
+
+  function runFolderAnimation() {
+    const container = document.getElementById('folderContainer');
+    const books = document.querySelectorAll('.flying-book');
+    const title = document.getElementById('folderTitle');
+
+    // Phase 1: Open folder + spread books (after 0.6s)
+    setTimeout(() => {
+      container.classList.add('open');
+      books.forEach(b => b.classList.add('spread'));
+    }, 600);
+
+    // Phase 2: Collect books into folder (after 3.5s)
+    setTimeout(() => {
+      books.forEach(b => {
+        b.classList.remove('spread');
+        b.classList.add('collected');
+      });
+    }, 3500);
+
+    // Phase 3: Close folder + show title (after 5s)
+    setTimeout(() => {
+      container.classList.remove('open');
+      title.classList.add('visible');
+    }, 5000);
+  }
+
+  // Start when page loads
+  window.addEventListener('load', () => {
+    // Preload images
+    setTimeout(() => showScene(0), 500);
+  });
+</script>
+
+</body>
+</html>
