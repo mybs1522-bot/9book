@@ -147,7 +147,7 @@ Deno.serve(async (req: Request) => {
       amount,
       currency,
       customer: customer?.id,
-      setup_future_usage: (isCheckout || isUpsell) ? "off_session" : undefined,
+      setup_future_usage: isUpsell ? "off_session" : undefined,
       metadata,
       receipt_email: email,
     });
