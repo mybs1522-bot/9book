@@ -341,9 +341,6 @@ export const OnetimePage: React.FC = () => {
                     items: [{ id: 'upsell-5books' }],
                     email,
                     name: resolvedName,
-                    // Hints for a true one-click flow when the backend supports saved PMs.
-                    saved_payment_method: savedPayment?.paymentMethodId || null,
-                    customer_id: savedPayment?.customerId || null,
                 })
             });
             if (!res.ok) throw new Error('Payment server error.');
@@ -657,19 +654,7 @@ export const OnetimePage: React.FC = () => {
             {payModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
                     <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-                        {viewState === 'SUCCESS' ? (
-                            <div className="p-8 text-center space-y-4">
-                                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
-                                    <Check size={32} className="text-white" />
-                                </div>
-                                <h3 className="font-display text-2xl font-black text-gray-900">All 5 books unlocked! 🎉</h3>
-                                <p className="text-gray-500 text-sm">Check your email for download links. You now own the full 6-book collection.</p>
-                                <button onClick={() => window.location.href = "https://drive.google.com/drive/folders/1cVcmiL-fo3o--aA-2YnXTO5UkF_3ERHc"} className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-black flex items-center justify-center gap-2">
-                                    <Download size={18} /> Download All 6 Books
-                                </button>
-                            </div>
-                        ) : (
-                            <div>
+                        <div>
                                 {/* Modal header */}
                                 <div className="flex items-center justify-between p-5 border-b border-gray-100">
                                     <div>
@@ -752,7 +737,6 @@ export const OnetimePage: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
-                        )}
                     </div>
                 </div>
             )}
