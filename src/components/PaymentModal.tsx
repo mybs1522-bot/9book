@@ -140,6 +140,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose }) =
                 mode: 'payment',
                 amount: 4900,
                 currency: 'usd',
+                setupFutureUsage: 'off_session',
                 automatic_payment_methods: { enabled: true },
                 appearance: {
                     theme: 'flat',
