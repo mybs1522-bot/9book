@@ -14,6 +14,13 @@ if (!STRIPE_SECRET_KEY) {
 
 let stripe: any;
 
+async function getOrCreateCustomer(email?: string, name?: string) {
+  if (!email) return null;
+  const existing = await stripe.customers.list({ email, limit: 1 });
+  if (existing?.data?.length) return existing.data[0];
+  return await stripe.customers.create({ email, name: name || undefined });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -36,7 +43,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json();
-    const { items, email, name, saved_payment_method, customer_id } = body;
+    const { items, email, name, saved_payment_method, customer_id, autoconfirm_saved_pm } = body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return json({ error: "No items in request" }, 400);
@@ -65,28 +72,82 @@ Deno.serve(async (req: Request) => {
     };
 
     const isUpsell = item.id === "upsell-5books";
+    const isCheckout = item.id === "lifetime-bundle";
 
-    // If we have a saved payment method + customer for the upsell, create
-    // a PI that frontend can confirm with confirmCardPayment (true one-click).
-    if (isUpsell && saved_payment_method && customer_id) {
+    // For reuse on upsell, ensure checkout payment belongs to a customer
+    // and marks setup for future off-session usage.
+    const customer = await getOrCreateCustomer(email, name);
+
+    const effectiveCustomerId = customer_id || customer?.id;
+
+    // One-click upsell: attempt immediate server-side charge first.
+    // If bank needs auth, fallback to returning clientSecret for frontend confirmCardPayment.
+    if (isUpsell && saved_payment_method && effectiveCustomerId && autoconfirm_saved_pm) {
+      try {
+        const immediate = await stripe.paymentIntents.create({
+          amount,
+          currency,
+          customer: effectiveCustomerId,
+          payment_method: saved_payment_method,
+          confirm: true,
+          off_session: true,
+          metadata,
+          receipt_email: email,
+        });
+
+        return json({
+          status: immediate.status,
+          paymentIntentId: immediate.id,
+          paid: immediate.status === "succeeded",
+        });
+      } catch (err: any) {
+        const maybePi = err?.raw?.payment_intent;
+        const requiresAction = err?.code === "authentication_required" || maybePi?.status === "requires_action";
+
+        if (requiresAction) {
+          const pi = await stripe.paymentIntents.create({
+            amount,
+            currency,
+            customer: effectiveCustomerId,
+            payment_method: saved_payment_method,
+            confirm: false,
+            metadata,
+            receipt_email: email,
+          });
+
+          return json({
+            status: "requires_action",
+            clientSecret: pi.client_secret,
+            paymentIntentId: pi.id,
+            paid: false,
+          });
+        }
+
+        throw err;
+      }
+    }
+
+    // Upsell with saved card hints but without autoconfirm flag: return clientSecret as fallback path
+    if (isUpsell && saved_payment_method && effectiveCustomerId) {
       const pi = await stripe.paymentIntents.create({
         amount,
         currency,
-        customer: customer_id,
+        customer: effectiveCustomerId,
         payment_method: saved_payment_method,
         confirm: false,
-        setup_future_usage: "off_session",
         metadata,
         receipt_email: email,
       });
 
-      return json({ clientSecret: pi.client_secret });
+      return json({ clientSecret: pi.client_secret, paymentIntentId: pi.id, paid: false });
     }
 
     // Default path: normal checkout or upsell without saved card
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency,
+      customer: customer?.id,
+      setup_future_usage: isCheckout ? "off_session" : undefined,
       metadata,
       receipt_email: email,
     });

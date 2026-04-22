@@ -185,6 +185,15 @@ export const OnetimePage: React.FC = () => {
         loadStripe();
     }, []);
 
+    const getStripeInstance = async () => {
+        if (stripeRef.current) return stripeRef.current;
+        for (let i = 0; i < 20; i += 1) {
+            await new Promise((r) => setTimeout(r, 150));
+            if (stripeRef.current) return stripeRef.current;
+        }
+        return null;
+    };
+
     // Stripe Elements init (lazy, only when modal opens as fallback)
     useEffect(() => {
         if (!payModalOpen) return;
@@ -241,9 +250,9 @@ export const OnetimePage: React.FC = () => {
     const handleBuyClick = async () => {
         trackMetaEvent({ eventName: 'AddToCart', content_name: '5 Interior Design Books Bundle — OTO', content_ids: ['5-interior-design-books-oto'], value: 27.00, currency: 'USD' });
 
-        // If we have a saved payment method from checkout and this user came from Stripe,
+        // If we have a saved payment method from checkout,
         // attempt a true one-click charge with no additional card entry.
-        if (fromStripeCheckout && savedPayment?.paymentMethodId && stripeRef.current) {
+        if (savedPayment?.paymentMethodId) {
             setOneClickProcessing(true);
             try {
                 const resolvedName = name || (email ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : 'Customer');
@@ -256,41 +265,59 @@ export const OnetimePage: React.FC = () => {
                         name: resolvedName,
                         saved_payment_method: savedPayment.paymentMethodId,
                         customer_id: savedPayment.customerId,
+                        autoconfirm_saved_pm: true,
                     })
                 });
                 if (!res.ok) throw new Error('Server error');
-                const { clientSecret } = await res.json();
+                const data = await res.json();
 
-                // Confirm with saved payment method — no Elements UI needed
-                const result = await stripeRef.current.confirmCardPayment(clientSecret, {
-                    payment_method: savedPayment.paymentMethodId,
-                });
-
-                if (result.error) throw new Error(result.error.message || 'Card declined');
-
-                if (result.paymentIntent?.status === 'succeeded') {
-                    trackMetaEvent({ eventName: 'Purchase', email, value: 27.00, currency: 'USD', content_name: '5 Interior Design Books Bundle', content_ids: ['5-interior-design-books-oto'], order_id: result.paymentIntent.id });
+                // Server-side immediate charge succeeded (best case)
+                if (data?.paid && data?.paymentIntentId) {
+                    trackMetaEvent({ eventName: 'Purchase', email, value: 27.00, currency: 'USD', content_name: '5 Interior Design Books Bundle', content_ids: ['5-interior-design-books-oto'], order_id: data.paymentIntentId });
                     fetch("https://dhufnozehayzjlsmnvdl.supabase.co/functions/v1/send-book-order-email", {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, name: resolvedName, orderId: result.paymentIntent.id, type: 'upsell-5books' })
+                        body: JSON.stringify({ email, name: resolvedName, orderId: data.paymentIntentId, type: 'upsell-5books' })
                     }).catch(() => {});
                     setOneClickProcessing(false);
                     setViewState('SUCCESS');
                     return;
                 }
-                throw new Error('Unexpected payment state');
+
+                // If additional bank auth is required, confirm with clientSecret (still no card entry form)
+                if (data?.clientSecret) {
+                    const stripe = await getStripeInstance();
+                    if (!stripe) throw new Error('Stripe not ready');
+
+                    const result = await stripe.confirmCardPayment(data.clientSecret, {
+                        payment_method: savedPayment.paymentMethodId,
+                    });
+
+                    if (result.error) throw new Error(result.error.message || 'Card declined');
+
+                    if (result.paymentIntent?.status === 'succeeded') {
+                        trackMetaEvent({ eventName: 'Purchase', email, value: 27.00, currency: 'USD', content_name: '5 Interior Design Books Bundle', content_ids: ['5-interior-design-books-oto'], order_id: result.paymentIntent.id });
+                        fetch("https://dhufnozehayzjlsmnvdl.supabase.co/functions/v1/send-book-order-email", {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email, name: resolvedName, orderId: result.paymentIntent.id, type: 'upsell-5books' })
+                        }).catch(() => {});
+                        setOneClickProcessing(false);
+                        setViewState('SUCCESS');
+                        return;
+                    }
+                }
+
+                throw new Error('Auto charge failed');
             } catch (err: any) {
-                console.warn('One-click payment failed, opening full checkout:', err?.message);
+                console.warn('One-click payment failed:', err?.message);
                 setOneClickProcessing(false);
-                // Fall back to modal
-                setPayModalOpen(true);
+                setErrorMessage('Auto payment could not be completed right now. Please try again in a moment.');
                 return;
             }
         }
 
         // If the user paid via Stripe but we couldn't securely reuse their card,
         // we do NOT show a new card form (to avoid asking for card details again).
-        if (fromStripeCheckout) {
+        if (fromStripeCheckout || !!savedPayment?.paymentMethodId) {
             setErrorMessage('Your original payment is complete. This one-time offer is currently unavailable because we could not securely reuse your card.');
             return;
         }
