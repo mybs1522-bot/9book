@@ -8,7 +8,7 @@ import { trackMetaEvent } from '../utils/meta-tracking';
 
 // --- CONFIGURATION ---
 const STRIPE_PUBLISHABLE_KEY = "pk_live_51PRJCsGGsoQTkhyv6OrT4zvnaaB5Y0MSSkTXi0ytj33oygsfW3dcu6aOFa9q3dr2mXYTCJErnFQJcOcyuDAsQd4B00lIAdclbB";
-const BACKEND_URL = "https://dhufnozehayzjlsmnvdl.supabase.co/functions/v1/create-payment-intent";
+const BACKEND_URL = "https://dhufnozehayzjlsmnvdl.supabase.co/functions/v1/create-intent-pay";
 const PAYPAL_BUSINESS_EMAIL = "design@avada.in";
 const PAYPAL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg";
 

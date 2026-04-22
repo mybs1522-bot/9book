@@ -9,7 +9,7 @@ import { BOOK_IMAGES } from '../AppHelpers';
 
 // --- CONFIGURATION ---
 const STRIPE_PUBLISHABLE_KEY = "pk_live_51PRJCsGGsoQTkhyv6OrT4zvnaaB5Y0MSSkTXi0ytj33oygsfW3dcu6aOFa9q3dr2mXYTCJErnFQJcOcyuDAsQd4B00lIAdclbB";
-const BACKEND_URL = "https://dhufnozehayzjlsmnvdl.supabase.co/functions/v1/create-payment-intent";
+const BACKEND_URL = "https://dhufnozehayzjlsmnvdl.supabase.co/functions/v1/create-intent-pay";
 const PAYPAL_BUSINESS_EMAIL = "design@avada.in";
 const PAYPAL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg";
 
@@ -263,7 +263,9 @@ export const CheckoutPage: React.FC = () => {
                 elements: elementsRef.current,
                 clientSecret,
                 confirmParams: {
-                    return_url: window.location.origin + '/checkout?success=true',
+                    // If Stripe needs to redirect for 3D Secure, come back directly to the upsell page
+                    // so the user is not shown an extra checkout success screen.
+                    return_url: window.location.origin + '/onetime?success=true&email=' + encodeURIComponent(email) + '&method=stripe',
                     receipt_email: email,
                     payment_method_data: {
                         billing_details: {
@@ -285,7 +287,6 @@ export const CheckoutPage: React.FC = () => {
                 setErrorMessage(result.error.message || "Payment failed.");
                 setViewState('FORM');
             } else if (result.paymentIntent?.status === 'succeeded') {
-                setViewState('SUCCESS');
                 trackMetaEvent({
                     eventName: 'Purchase',
                     email,
@@ -316,10 +317,8 @@ export const CheckoutPage: React.FC = () => {
                     }));
                 } catch { /* storage unavailable — fine, falls back to Link */ }
 
-                // Redirect to upsell page
-                setTimeout(() => {
-                    window.location.href = '/onetime?email=' + encodeURIComponent(email);
-                }, 1500);
+                // Immediately redirect to upsell page; no intermediate checkout success/download screen.
+                window.location.href = '/onetime?email=' + encodeURIComponent(email) + '&method=stripe';
             }
         } catch (err: any) {
             setErrorMessage(err.message || "An unexpected error occurred.");

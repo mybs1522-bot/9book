@@ -7,7 +7,7 @@ import {
 import { trackMetaEvent } from '../utils/meta-tracking';
 
 const STRIPE_PUBLISHABLE_KEY = "pk_live_51PRJCsGGsoQTkhyv6OrT4zvnaaB5Y0MSSkTXi0ytj33oygsfW3dcu6aOFa9q3dr2mXYTCJErnFQJcOcyuDAsQd4B00lIAdclbB";
-const BACKEND_URL = "https://dhufnozehayzjlsmnvdl.supabase.co/functions/v1/create-payment-intent";
+const BACKEND_URL = "https://dhufnozehayzjlsmnvdl.supabase.co/functions/v1/create-intent-pay";
 const PAYPAL_LOGO_URL = "https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg";
 const PAYPAL_BUSINESS_EMAIL = "design@avada.in";
 
@@ -102,6 +102,7 @@ export const OnetimePage: React.FC = () => {
     const [showDownsell, setShowDownsell] = useState(false);
     const [declined, setDeclined] = useState(false);
     const [oneClickProcessing, setOneClickProcessing] = useState(false);
+    const [fromStripeCheckout, setFromStripeCheckout] = useState(false);
     const [savedPayment, setSavedPayment] = useState<{
         email: string;
         name: string | null;
@@ -119,6 +120,9 @@ export const OnetimePage: React.FC = () => {
         const params = new URLSearchParams(window.location.search);
         const e = params.get('email');
         if (e) setEmail(e);
+
+        const method = params.get('method');
+        if (method === 'stripe') setFromStripeCheckout(true);
         try {
             const raw = sessionStorage.getItem('checkoutPayment');
             if (raw) {
@@ -237,8 +241,9 @@ export const OnetimePage: React.FC = () => {
     const handleBuyClick = async () => {
         trackMetaEvent({ eventName: 'AddToCart', content_name: '5 Interior Design Books Bundle — OTO', content_ids: ['5-interior-design-books-oto'], value: 27.00, currency: 'USD' });
 
-        // If we have a saved payment method from checkout, attempt one-click charge
-        if (savedPayment?.paymentMethodId && stripeRef.current) {
+        // If we have a saved payment method from checkout and this user came from Stripe,
+        // attempt a true one-click charge with no additional card entry.
+        if (fromStripeCheckout && savedPayment?.paymentMethodId && stripeRef.current) {
             setOneClickProcessing(true);
             try {
                 const resolvedName = name || (email ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : 'Customer');
@@ -283,7 +288,14 @@ export const OnetimePage: React.FC = () => {
             }
         }
 
-        // No saved payment method — open modal directly
+        // If the user paid via Stripe but we couldn't securely reuse their card,
+        // we do NOT show a new card form (to avoid asking for card details again).
+        if (fromStripeCheckout) {
+            setErrorMessage('Your original payment is complete. This one-time offer is currently unavailable because we could not securely reuse your card.');
+            return;
+        }
+
+        // Non-Stripe visitors (PayPal / direct) use the full payment modal
         setPayModalOpen(true);
     };
 
