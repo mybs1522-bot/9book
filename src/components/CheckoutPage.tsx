@@ -108,6 +108,7 @@ export const CheckoutPage: React.FC = () => {
                 mode: 'payment',
                 amount: 900,
                 currency: 'usd',
+                setupFutureUsage: 'off_session',
                 automatic_payment_methods: { enabled: true },
 
                 appearance: {
@@ -156,6 +157,15 @@ export const CheckoutPage: React.FC = () => {
                     billingDetails: {
                         address: 'never',
                     },
+                },
+                terms: {
+                    card: 'never',
+                    auBecsDebit: 'never',
+                    bancontact: 'never',
+                    ideal: 'never',
+                    sepaDebit: 'never',
+                    sofort: 'never',
+                    usBankAccount: 'never',
                 },
             });
             const peMount = document.getElementById('stripe-payment-element');
