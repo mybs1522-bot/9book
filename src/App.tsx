@@ -3,6 +3,7 @@ import { CheckoutPage } from './components/CheckoutPage';
 import { HardcopyCheckoutPage } from './components/HardcopyCheckoutPage';
 import { SuccessPage } from './components/SuccessPage';
 import { OnetimePage } from './components/OnetimePage';
+import { RefundPolicyPage } from './components/RefundPolicyPage';
 import { AdminModal } from './components/AdminModal';
 import { LoginModal } from './components/LoginModal';
 import { FAQ_ITEMS, TESTIMONIALS, COURSES, INDUSTRIES, FEATURES, BUSINESS_MODULES } from './constants';
@@ -81,6 +82,7 @@ const App: React.FC = () => {
   if (currentPath === '/checkout') return <CheckoutPage />;
   if (currentPath === '/checkout-hardcopy') return <HardcopyCheckoutPage />;
   if (currentPath === '/onetime') return <OnetimePage />;
+  if (currentPath === '/refund-policy') return <RefundPolicyPage />;
   if (currentPath.startsWith('/success')) return <SuccessPage />;
 
   const navigateToCheckout = () => {
@@ -97,10 +99,29 @@ const App: React.FC = () => {
     setCurrentPath('/checkout');
   };
 
+  const navigateToRefundPolicy = () => {
+    window.scrollTo(0, 0);
+    window.history.pushState({}, '', '/refund-policy');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
   return (
     <div className="min-h-screen bg-white text-gray-900 font-sans overflow-x-hidden antialiased relative">
       <style>{APP_STYLES}</style>
       
+      <header className="absolute top-0 w-full z-50 px-5 py-4 flex justify-between items-center max-w-6xl left-1/2 -translate-x-1/2">
+        <div className="scale-75 md:scale-100 origin-left">
+          <Logo />
+        </div>
+        <button 
+          onClick={navigateToRefundPolicy}
+          className="text-[10px] md:text-xs font-bold text-gray-600 hover:text-gray-900 uppercase tracking-widest cursor-pointer flex items-center gap-1.5 px-4 py-2.5 rounded-full hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-200 shadow-sm hover:shadow"
+        >
+          <AlertCircle size={14} className="text-orange-600" />
+          Refund Policy
+        </button>
+      </header>
+
       {showSplash && currentPath === '/' && (
         <SplashScreen onComplete={() => setShowSplash(false)} />
       )}
@@ -164,6 +185,32 @@ const App: React.FC = () => {
             <p className="text-gray-400 text-xs mt-4 flex items-center gap-2">
               <Clock size={12} /> Instant Digital Download · Lifetime Access
             </p>
+          </div>
+        </section>
+
+        {/* IMPORTANT POINTS */}
+        <section className="bg-orange-50 border-y border-orange-100 py-6 md:py-8">
+          <div className="max-w-6xl mx-auto px-5">
+            <ul className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12">
+              <li className="flex items-center gap-3 text-sm md:text-base font-bold text-orange-900 uppercase tracking-wide">
+                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="text-orange-600" size={16} />
+                </div>
+                Book has Inch/Feet as Metric
+              </li>
+              <li className="flex items-center gap-3 text-sm md:text-base font-bold text-orange-900 uppercase tracking-wide">
+                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                  <Layers className="text-orange-600" size={16} />
+                </div>
+                High-Density Technical Diagrams
+              </li>
+              <li className="flex items-center gap-3 text-sm md:text-base font-bold text-orange-900 uppercase tracking-wide">
+                <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                  <BookOpen className="text-orange-600" size={16} />
+                </div>
+                Written in Clear English Language
+              </li>
+            </ul>
           </div>
         </section>
 
