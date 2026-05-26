@@ -470,6 +470,9 @@ export const OnetimePage: React.FC = () => {
                         </div>
                     </div>
                     <p className="text-gray-600 text-sm mb-4">All 5 books. <strong>Instant PDF download. Lifetime updates. 30-day guarantee.</strong></p>
+                    <div className="inline-flex items-center gap-2 bg-orange-100/80 text-orange-900 text-xs md:text-sm font-bold uppercase tracking-widest px-4 py-2 rounded-full mb-5 border border-orange-200">
+                        <Check size={14} className="text-orange-600" /> All Books include Inch/Feet as Metric
+                    </div>
                     <button
                         onClick={handleBuyClick}
                         className="pulse-cta w-full md:w-auto px-10 py-5 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-2xl font-black text-lg shadow-xl shadow-orange-500/30 hover:shadow-orange-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all inline-flex items-center justify-center gap-3"
